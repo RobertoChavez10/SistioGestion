@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carga de Categorías de Equipos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .container { max-width: 600px; margin-top: 50px; }
+    .instructions { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">Cargar Categorías desde Excel</h2>
+    
+    <div class="instructions">
+      <h5>Instrucciones:</h5>
+      <ol>
+        <li>El archivo Excel debe tener las columnas: <strong>nombre</strong> y <strong>tipo</strong></li>
+        <li>Los valores válidos para <strong>tipo</strong> son: <code>biomedico</code> o <code>electronico</code></li>
+        <li>Descarga la <a href="#" id="downloadTemplate">plantilla de ejemplo</a></li>
+      </ol>
+    </div>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label for="excelFile" class="form-label">Seleccione archivo Excel:</label>
+        <input class="form-control" type="file" id="excelFile" name="excelFile" accept=".xlsx, .xls" required>
+        <div class="form-text">Formatos aceptados: .xlsx, .xls (Tamaño máximo: 5MB)</div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary w-100">Subir Archivo</button>
+    </form>
+
+    <div id="result" class="mt-4"></div>
+  </div>
+
+  <script>
+    // Descargar plantilla
+    document.getElementById('downloadTemplate').addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Crear un libro de Excel simple
+      const templateData = [
+        { nombre: "Rayos X", tipo: "biomedico" },
+        { nombre: "Monitores", tipo: "electronico" },
+        { nombre: "Resonancia", tipo: "biomedico" }
+      ];
+      
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Categorias");
+      
+      // Descargar el archivo
+      XLSX.writeFile(wb, "plantilla_categorias.xlsx");
+    });
+
+    // Manejar envío del formulario
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData();
+      const fileInput = document.getElementById('excelFile');
+      formData.append('excelFile', fileInput.files[0]);
+
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = `
+        <div class="alert alert-info d-flex align-items-center">
+          <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+          Procesando archivo, por favor espere...
+        </div>
+      `;
+
+      try {
+        const response = await fetch('/api/upload-categorias', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}` // Asegurar autenticación
+          }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <div class="alert alert-success">
+              <h5>¡Carga completada!</h5>
+              <p>${data.message}</p>
+              <a href="/admin-categorias.html" class="btn btn-success">Ver Categorías</a>
+            </div>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+              <h5>Error al procesar el archivo</h5>
+              <p>${data.error || 'Error desconocido'}</p>
+              ${data.details ? `<small>Detalles: ${data.details}</small>` : ''}
+            </div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="alert alert-danger">
+            <h5>Error de conexión</h5>
+            <p>${error.message}</p>
+          </div>
+        `;
+      } finally {
+        // Limpiar el formulario
+        document.getElementById('uploadForm').reset();
+      }
+    });
+  </script>
+
+  <!-- Incluir la librería para generar Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</body>
+</html>

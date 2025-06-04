@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equipos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="navbar"></div>
+  
+  <h1>Gestión de Equipos</h1>
+  
+  <!-- Formulario dinámico según rol -->
+  <div id="form-container"></div>
+  
+  <!-- Lista de equipos -->
+  <div id="equipos-container"></div>
+  
+  <!-- Búsqueda -->
+  <input type="text" id="busqueda" placeholder="Buscar equipos...">
+  <div id="resultados-busqueda"></div>
+
+  <script>
+    // Cargar navbar
+    fetch('/navbar.html')
+      .then(response => response.text())
+      .then(data => document.getElementById('navbar').innerHTML = data);
+    
+    // Mostrar formulario según rol
+    fetch('/tipo-usuario')
+      .then(response => response.json())
+      .then(data => {
+        const tipoUsuario = data.tipo_usuario;
+        const formContainer = document.getElementById('form-container');
+        
+        if (tipoUsuario === 'admin' || tipoUsuario === 'vendedor') {
+          formContainer.innerHTML = `
+            <h2>Agregar Nuevo Equipo</h2>
+            <form id="equipo-form">
+              <input type="text" name="nombre" placeholder="Nombre" required>
+              <textarea name="descripcion" placeholder="Descripción"></textarea>
+            
+           
+              <input type="text" name="categoria" placeholder="Categoría">
+              <button type="submit">Guardar</button>
+            </form>
+          `;
+          
+          document.getElementById('equipo-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const endpoint = tipoUsuario === 'admin' ? '/admin/equipos' : '/vendedor/equipos';
+            
+            fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(Object.fromEntries(formData))
+            })
+            .then(response => response.json())
+            .then(data => {
+              alert(tipoUsuario === 'admin' ? 'Equipo creado' : 'Equipo enviado para aprobación');
+              cargarEquipos();
+            });
+          });
+        }
+      });
+    
+    // Cargar y mostrar equipos
+    function cargarEquipos() {
+      fetch('/equipos')
+        .then(response => response.json())
+        .then(data => {
+          const container = document.getElementById('equipos-container');
+          container.innerHTML = '<h2>Lista de Equipos</h2>';
+          
+          data.forEach(equipo => {
+            const div = document.createElement('div');
+            div.className = 'equipo';
+            div.innerHTML = `
+              <h3>${equipo.nombre}</h3>
+              <p>${equipo.descripcion}</p>
+              <p>Modelo: ${equipo.modelo || 'N/A'}</p>
+              <p>Marca: ${equipo.marca || 'N/A'}</p>
+              ${equipo.es_aprobado === 0 ? '<p style="color:orange;">(Pendiente de aprobación)</p>' : ''}
+            `;
+            container.appendChild(div);
+          });
+        });
+    }
+    
+    // Búsqueda en tiempo real
+    document.getElementById('busqueda').addEventListener('input', function() {
+      const query = this.value.trim();
+      if (query.length < 2) {
+        document.getElementById('resultados-busqueda').innerHTML = '';
+        return;
+      }
+      
+      fetch(`/equipos/buscar?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+          const container = document.getElementById('resultados-busqueda');
+          container.innerHTML = '<h3>Resultados de búsqueda:</h3>';
+          
+          data.forEach(equipo => {
+            const div = document.createElement('div');
+            div.className = 'equipo';
+            div.innerHTML = `
+              <h4>${equipo.nombre}</h4>
+              <p>${equipo.descripcion}</p>
+            `;
+            container.appendChild(div);
+          });
+        });
+    });
+    
+    // Cargar equipos al inicio
+    cargarEquipos();
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<nav>
+  <ul id="menu">
+    <li><a href="/">Inicio</a></li>
+    <li><a href="/equipos.html">Equipos</a></li>
+    <script>
+      fetch('/tipo-usuario')
+        .then(response => response.json())
+        .then(data => {
+          const menu = document.getElementById('menu');
+          const tipoUsuario = data.tipo_usuario;
+          
+          if (tipoUsuario === 'admin') {
+            menu.innerHTML += '<li><a href="/admin/usuarios">Usuarios</a></li>';
+          }
+          
+          menu.innerHTML += '<li><a href="/logout">Cerrar Sesión</a></li>';
+        });
+    </script>
+  </ul>
+</nav>
