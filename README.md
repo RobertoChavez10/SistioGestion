@@ -1,4 +1,4 @@
-# SistioGestion
+# Sitio Gestion
 Sistema de Gestión equipos biomédicos y electrónicos
 
 // Iniciar el servidor
